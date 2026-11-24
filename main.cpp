@@ -1,29 +1,67 @@
-
-#include <cpr/cpr.h>
+#include <cstring>
 #include <iostream>
-#include <nlohmann/json.hpp>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <sstream>
 using namespace std;
-using json = nlohmann::json;
 
-int main (){
-    cpr::Url URL{
-    "http://www.dnd5eapi.co/api/"
-     "monsters/giant-spider"
-    };
+int main(){
+
+    //AF_NET: ipv4 protocol SOCK_STREAm TCP socket
+    int serverSocket= socket(AF_INET, SOCK_STREAM, 0);
+
+    if(serverSocket == -1){
+        perror("socket");
+        return 1;
+
+    }
+    cout <<"socket created\n";
+    
 
 
-    cpr::Response Res{cpr::Get(URL)};
+    //definig the server adress
+    //htons() converts port to network byte order
+    //INADDR_ANY accept connection on any ip
+    sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+
+    // bind socket to address
+    bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    
+    //listen for the incoming connection
+    listen(serverSocket,5);
+
+    //accept the client connection
+    int clientSocket = accept(serverSocket,nullptr,nullptr);
+    
+    //Recive data from client
+    char buffer[1024]= {0};
+    recv(clientSocket,buffer,sizeof(buffer),0);
+
+    const char* response= 
+  
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 12\r\n"
+    "Connection: close\r\n"
+    "\r\n"
+    "Connection succeded  !";
+
+    send(clientSocket,response,strlen(response),0);
 
 
 
-   cout<<"Status"<<Res.status_code<<'\n';
 
-    json Doc= json::parse(Res.text);
 
-    cout<<Doc.at("name").get<string>()<<'\n';
-    cout <<Doc.at("desc").get<string>()<<'\n';
-    cout<<Doc.at("type").get<string>()<<'\n';    
-    cout<<Doc.at("strength").get<int>()<<'\n';
+
+    cout<< "Massage from client:"<<buffer<<endl;
+
+    //close the servrsocket
+    close(serverSocket);
+
+     
 
 
 }
